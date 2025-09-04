@@ -204,6 +204,17 @@ UPROGS=\
 
 
 
+<<<<<<< HEAD
+=======
+ifeq ($(LAB),util)
+UPROGS += \
+	$U/_sleep\
+	$U/_sixfive\
+	$U/_find
+endif
+### ENDIF
+
+>>>>>>> 586bab2 (util lab)
 
 ifeq ($(LAB),syscall)
 UPROGS += \
@@ -283,7 +294,13 @@ ifeq ($(LAB),util)
 	UEXTRA += user/sixfive.txt
 	UPROGS += $U/_memdump
 endif
+<<<<<<< HEAD
 
+=======
+ifeq ($(LAB),syscall)
+	UEXTRA += user/exec.sh
+endif
+>>>>>>> 586bab2 (util lab)
 
 fs.img: mkfs/mkfs README $(UEXTRA) $(UPROGS)
 	mkfs/mkfs fs.img README $(UEXTRA) $(UPROGS)

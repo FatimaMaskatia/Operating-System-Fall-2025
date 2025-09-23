@@ -17,7 +17,8 @@ char* fmtname(char *path) {
   return buf;
 }
 
-void find(char *path, char *filename, int exec_flag, char *cmd) {
+// Updated find signature to include command arguments
+void find(char *path, char *filename, int exec_flag, char **cmdargv, int cmdargc) {
   char buf[512], *p;
   int fd;
   struct dirent de;
@@ -40,10 +41,13 @@ void find(char *path, char *filename, int exec_flag, char *cmd) {
       if(exec_flag){
         int pid = fork();
         if(pid == 0){
-          char *argv[4];
-          argv[0] = cmd;
-          argv[1] = path;
-          argv[2] = 0;
+          char *argv[MAXARG];
+          int i;
+          for(i=0; i<cmdargc; i++){
+              argv[i] = cmdargv[i];   // copy all command args after -exec
+          }
+          argv[i++] = path;           // append found file
+          argv[i] = 0;
           exec(argv[0], argv);
           exit(0);
         } else {
@@ -68,7 +72,7 @@ void find(char *path, char *filename, int exec_flag, char *cmd) {
       if(strcmp(de.name, ".") == 0 || strcmp(de.name, "..") == 0) continue;
       memmove(p, de.name, DIRSIZ);
       p[DIRSIZ] = 0;
-      find(buf, filename, exec_flag, cmd);
+      find(buf, filename, exec_flag, cmdargv, cmdargc);
     }
     break;
   }
@@ -82,12 +86,17 @@ int main(int argc, char *argv[]) {
   }
 
   int exec_flag = 0;
-  char *cmd = 0;
+  char *cmdargv[MAXARG];
+  int cmdargc = 0;
+
   if(argc > 4 && strcmp(argv[3], "-exec") == 0){
     exec_flag = 1;
-    cmd = argv[4];
+    cmdargc = argc - 4;          // number of arguments after -exec
+    for(int i=0; i<cmdargc; i++){
+      cmdargv[i] = argv[4+i];    // copy command arguments
+    }
   }
 
-  find(argv[1], argv[2], exec_flag, cmd);
+  find(argv[1], argv[2], exec_flag, cmdargv, cmdargc);
   exit(0);
 }

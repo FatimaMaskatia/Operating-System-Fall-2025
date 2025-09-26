@@ -2,29 +2,22 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/fs.h"
-#include "kernel/fcntl.h"
-#include "kernel/param.h"
 
-char buf[512];
-int exec_flag = 0;
-char *cmdargv[16];
-int cmdargc = 0;
+// regex functions from grep.c
+int match(char*, char*);
+int matchhere(char*, char*);
+int matchstar(int, char*, char*);
 
-//
-// regex functions copied from grep.c
-//
-int matchhere(char *re, char *text);
-int matchstar(int c, char *re, char *text);
-
+// Regex matcher
 int
 match(char *re, char *text)
 {
   if(re[0] == '^')
     return matchhere(re+1, text);
-  do {  // must look even if string is empty
+  do{  // must look at empty string too
     if(matchhere(re, text))
       return 1;
-  } while(*text++ != '\0');
+  }while(*text++ != '\0');
   return 0;
 }
 
@@ -45,16 +38,14 @@ matchhere(char *re, char *text)
 int
 matchstar(int c, char *re, char *text)
 {
-  do{ // a * matches zero or more instances
+  do{  // a * matches zero or more instances
     if(matchhere(re, text))
       return 1;
   }while(*text!='\0' && (*text++==c || c=='.'));
   return 0;
 }
 
-//
-// helper: get last element of path
-//
+// helper: extract last element of path
 char*
 fmtname(char *path)
 {
@@ -70,13 +61,11 @@ fmtname(char *path)
   if(strlen(p) >= DIRSIZ)
     return p;
   memmove(buf, p, strlen(p));
-  memset(buf+strlen(p), 0, DIRSIZ-strlen(p));
+  buf[strlen(p)] = 0;
   return buf;
 }
 
-//
 // recursive find
-//
 void
 find(char *path, char *pattern)
 {
@@ -98,26 +87,8 @@ find(char *path, char *pattern)
 
   switch(st.type){
   case T_FILE:
-    if(match(pattern, fmtname(path))){   // use regex here
-      if(exec_flag){
-        int pid = fork();
-        if(pid == 0){
-          char *argv[MAXARG];
-          int i;
-          for(i=0; i<cmdargc; i++){
-            argv[i] = cmdargv[i];
-          }
-          argv[i++] = path;
-          argv[i] = 0;
-          exec(argv[0], argv);
-          fprintf(2, "find: exec %s failed\n", argv[0]);
-          exit(1);
-        } else {
-          wait(0);
-        }
-      } else {
-        printf("%s\n", path);
-      }
+    if(match(pattern, fmtname(path))){
+      printf("%s\n", path);
     }
     break;
 
@@ -146,21 +117,10 @@ find(char *path, char *pattern)
 int
 main(int argc, char *argv[])
 {
-  if(argc < 2){
-    fprintf(2, "Usage: find <path> <pattern> [-exec cmd ...]\n");
+  if(argc != 3){
+    fprintf(2, "Usage: find <path> <pattern>\n");
     exit(1);
   }
-
-  char *path = argv[1];
-  char *pattern = argv[2];
-
-  if(argc > 3 && strcmp(argv[3], "-exec") == 0){
-    exec_flag = 1;
-    cmdargc = argc-4;
-    for(int i=0; i<cmdargc; i++)
-      cmdargv[i] = argv[4+i];
-  }
-
-  find(path, pattern);
+  find(argv[1], argv[2]);
   exit(0);
 }

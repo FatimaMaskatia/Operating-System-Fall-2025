@@ -57,9 +57,50 @@ main(int argc, char *argv[])
   exit(0);
 }
 
+
 void
 memdump(char *fmt, char *data)
 {
-  // Your code here.
-
+  while (*fmt) {
+    switch (*fmt) {
+    case 'i': { // 4 bytes -> 32-bit integer
+      int val = *(int*)data;
+      printf("%d\n", val);
+      data += 4;
+      break;
+    }
+    case 'p': { // 8 bytes -> 64-bit integer in hex
+      long val = *(long*)data;
+      printf("%lx\n", val);
+      data += 8;
+      break;
+    }
+    case 'h': { // 2 bytes -> short
+      short val = *(short*)data;
+      printf("%d\n", val);
+      data += 2;
+      break;
+    }
+    case 'c': { // 1 byte -> char
+      char val = *data;
+      printf("%c\n", val);
+      data += 1;
+      break;
+    }
+    case 's': { // pointer to string (8 bytes)
+      char *str = *(char **)data;
+      printf("%s\n", str);
+      data += 8;
+      break;
+    }
+    case 'S': { // rest is string
+      printf("%s\n", data);
+      return;
+    }
+    default:
+      printf("Unknown format: %c\n", *fmt);
+      return;
+    }
+    fmt++;
+  }
 }

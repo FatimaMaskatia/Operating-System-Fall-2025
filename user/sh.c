@@ -1,9 +1,9 @@
 // Shell.
-//#include <string.h>
+
 #include "kernel/types.h"
+#include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/fcntl.h"
-#include "kernel/fs.h"    // for DIRSIZ, struct dirent
 
 // Parsed command representation
 #define EXEC  1
@@ -13,23 +13,11 @@
 #define BACK  5
 
 #define MAXARGS 10
+#define MAX_HISTORY 10
 
-//added below line
-
-int
-strncmp(const char *p, const char *q, uint n)
-{
-  while(n > 0 && *p && *q) {
-    if(*p != *q)
-      return (uchar)*p - (uchar)*q;
-    p++;
-    q++;
-    n--;
-  }
-  if(n == 0)
-    return 0;
-  return (uchar)*p - (uchar)*q;
-}
+// Global history variables
+char history[MAX_HISTORY][100];
+int history_count = 0;
 
 struct cmd {
   int type;
@@ -72,60 +60,28 @@ void panic(char*);
 struct cmd *parsecmd(char*);
 void runcmd(struct cmd*) __attribute__((noreturn));
 
-//
-// Helper: autocomplete - completes the last token in buf (very simple).
-// Appends the rest of the first matching filename from current directory.
-//
-void
-autocomplete(char *buf, int *np, int nbuf)
-{
-  int fd;
-  struct dirent de;
-  char name[DIRSIZ+1];
-  int i;
-  int start;       // index of start of last token
-  int prefixlen;
-
-  // find start of last token (separated by space or tab)
-  start = *np - 1;
-  while (start >= 0 && buf[start] != ' ' && buf[start] != '\t')
-    start--;
-  start++;
-  prefixlen = *np - start;
-  if (prefixlen < 0) prefixlen = 0;
-
-  // open current directory
-  if ((fd = open(".", O_RDONLY)) < 0)
-    return;
-
-  // search for first match
-  while (read(fd, &de, sizeof(de)) == sizeof(de)) {
-    if (de.inum == 0)
-      continue;
-    // make name null-terminated
-    memmove(name, de.name, DIRSIZ);
-    name[DIRSIZ] = 0;
-    // trim trailing zeros/spaces
-    for (i = DIRSIZ-1; i >= 0; i--) {
-      if (name[i] == 0 || name[i] == ' ')
-        name[i] = 0;
-      else
-        break;
+// History functions
+void add_to_history(char *cmd) {
+    if(strlen(cmd) > 1) { // Don't save empty commands
+        if(history_count < MAX_HISTORY) {
+            strcpy(history[history_count++], cmd);
+        } else {
+            // Shift history
+            for(int i = 1; i < MAX_HISTORY; i++) {
+                strcpy(history[i-1], history[i]);
+            }
+            strcpy(history[MAX_HISTORY-1], cmd);
+        }
     }
-    if (prefixlen == 0 || strncmp(name, buf + start, prefixlen) == 0) {
-      int rest = strlen(name) - prefixlen;
-      if (rest > 0 && *np + rest < nbuf) {
-        // append rest to buffer
-        memmove(buf + *np, name + prefixlen, rest);
-        *np += rest;
-        buf[*np] = 0;
-        // show completion to user
-        write(1, name + prefixlen, rest);
-      }
-      break;
+}
+
+void show_history() {
+    for(int i = 0; i < history_count; i++) {
+        printf("%d: %s", i, history[i]);
+        if(history[i][strlen(history[i])-1] != '\n') {
+            printf("\n");
+        }
     }
-  }
-  close(fd);
 }
 
 // Execute cmd.  Never returns.
@@ -200,50 +156,43 @@ runcmd(struct cmd *cmd)
     bcmd = (struct backcmd*)cmd;
     if(fork1() == 0)
       runcmd(bcmd->cmd);
-    // parent returns immediately (no wait)
     break;
   }
   exit(0);
 }
 
 int
-getcmd(char *buf, int nbuf)
+getcmd(char *buf, int nbuf, int interactive)
 {
-  write(2, "$ ", 2);
-  memset(buf, 0, nbuf);
-
-  int n = 0;
-  char c;
-  while (1) {
-    int r = read(0, &c, 1);
-    if (r <= 0) {
-      // EOF or error
-      return -1;
-    }
-    if (c == '\n') {
-      buf[n] = 0;
-      write(1, "\n", 1);
-      return 0;
-    } else if (c == '\t') {
-      // TAB pressed: try to autocomplete last token
-      autocomplete(buf, &n, nbuf);
-    } else {
-      if (n + 1 < nbuf) {
-        buf[n++] = c;
-        // echo char
-        write(1, &c, 1);
-      }
-    }
+  if(interactive) {
+    write(2, "$ ", 2);
   }
-  // unreachable
-  return -1;
+  memset(buf, 0, nbuf);
+  gets(buf, nbuf);
+  if(buf[0] == 0) // EOF
+    return -1;
+  return 0;
 }
 
 int
-main(void)
+main(int argc, char *argv[])
 {
   static char buf[100];
   int fd;
+  int interactive = 1;
+
+  // If arguments passed, we're reading from file
+  if(argc > 1) {
+    interactive = 0;
+    if((fd = open(argv[1], O_RDONLY)) < 0) {
+      fprintf(2, "cannot open %s\n", argv[1]);
+      exit(1);
+    }
+    // Redirect stdin to the file
+    close(0);
+    dup(fd);
+    close(fd);
+  }
 
   // Ensure that three file descriptors are open.
   while((fd = open("console", O_RDWR)) >= 0){
@@ -254,42 +203,54 @@ main(void)
   }
 
   // Read and run input commands.
-  while(getcmd(buf, sizeof(buf)) >= 0){
-    char *cmdline = buf;
-    while (*cmdline == ' ' || *cmdline == '\t')
-      cmdline++;
-    if (*cmdline == '\n' || *cmdline == 0) // is a blank command
-      continue;
-
-    // builtin cd (must run in parent)
-    if(cmdline[0] == 'c' && cmdline[1] == 'd' && cmdline[2] == ' '){
-      // Chdir must be called by the parent, not the child.
-      cmdline[strlen(cmdline)-1] = 0;  // chop \n (if present)
-      if(chdir(cmdline+3) < 0)
-        fprintf(2, "cannot cd %s\n", cmdline+3);
-      continue;
+  while(getcmd(buf, sizeof(buf), interactive) >= 0){
+    // Remove trailing newline for processing
+    int len = strlen(buf);
+    if(len > 0 && buf[len-1] == '\n') {
+      buf[len-1] = 0;
     }
-
-    // parse command in parent so we can inspect it (e.g., BACK or builtin wait)
-    struct cmd *cmd = parsecmd(cmdline);
-
-    // builtin wait: if the command is an EXEC and argv[0] == "wait", handle here
-    if(cmd && cmd->type == EXEC){
-      struct execcmd *ecmd = (struct execcmd*)cmd;
-      if(ecmd->argv[0] && strcmp(ecmd->argv[0], "wait") == 0){
-        // wait for all children (returns -1 on no children)
-        while(wait(0) > 0)
-          ;
-        continue;
+    
+    // Handle empty command
+    if(strlen(buf) == 0) {
+      if(interactive) {
+        continue; // Show prompt again
+      } else {
+        break; // End of file
       }
     }
-
-    // run the command
-    if(fork1() == 0)
-      runcmd(cmd);
-    // parent: if the command is not a background command, wait
-    if(!(cmd && cmd->type == BACK))
+    
+    // Handle history command
+    if(strcmp(buf, "history") == 0) {
+      show_history();
+      if(interactive) {
+        continue;
+      } else {
+        break;
+      }
+    }
+    
+    // Save to history before processing (only in interactive mode)
+    if(interactive) {
+      add_to_history(buf);
+    }
+    
+    char *cmd = buf;
+    while (*cmd == ' ' || *cmd == '\t')
+      cmd++;
+      
+    if(cmd[0] == 'c' && cmd[1] == 'd' && cmd[2] == ' '){
+      if(chdir(cmd+3) < 0)
+        fprintf(2, "cannot cd %s\n", cmd+3);
+    } else {
+      if(fork1() == 0)
+        runcmd(parsecmd(cmd));
       wait(0);
+    }
+    
+    // If non-interactive mode, break after first command
+    if(!interactive) {
+      break;
+    }
   }
   exit(0);
 }
@@ -311,10 +272,6 @@ fork1(void)
     panic("fork");
   return pid;
 }
-
-//PAGEBREAK!
-// Constructors
-
 struct cmd*
 execcmd(void)
 {
@@ -379,7 +336,7 @@ backcmd(struct cmd *subcmd)
   cmd->cmd = subcmd;
   return (struct cmd*)cmd;
 }
-//PAGEBREAK!
+
 // Parsing
 
 char whitespace[] = " \t\r\n\v";

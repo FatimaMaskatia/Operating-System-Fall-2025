@@ -110,7 +110,6 @@ static struct proc*
 allocproc(void)
 {
   struct proc *p;
-
   for(p = proc; p < &proc[NPROC]; p++) {
     acquire(&p->lock);
     if(p->state == UNUSED) {
@@ -169,6 +168,8 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  //added for os lab 2 sandbox
+  p->sandbox_mask = 0;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -275,9 +276,9 @@ kfork(void)
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
-
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
+np->sandbox_mask = p->sandbox_mask;
 
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)

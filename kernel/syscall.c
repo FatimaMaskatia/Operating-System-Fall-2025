@@ -101,6 +101,7 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
+extern uint64 sys_interpose(void); //added for os lab 2 sandbox qs
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -126,6 +127,7 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_interpose] sys_interpose, //added fir sandbox os lab2
 };
 
 void
@@ -134,7 +136,14 @@ syscall(void)
   int num;
   struct proc *p = myproc();
 
-  num = p->trapframe->a7;
+num = p->trapframe->a7;
+//    num = *(int *) 0; uncomment for checking panic for os lab2 q1
+if (p->sandbox_mask & (1 << num)) {
+    // this syscall is blocked
+    p->trapframe->a0 = -1;   // return error
+    return;
+}
+  
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     // Use num to lookup the system call function for num, call it,
     // and store its return value in p->trapframe->a0

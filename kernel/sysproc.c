@@ -105,3 +105,26 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+//added function for sandbox qs, lab 2
+extern struct proc *myproc();
+
+uint64
+sys_interpose(void)
+{
+  int mask;
+  char path[MAXPATH];
+
+  // get syscall args
+  argint(0, &mask);
+  argstr(1, path, MAXPATH);
+
+  struct proc *p = myproc();
+  p->sandbox_mask = mask;
+
+ return 0;
+}
+
+
+
+

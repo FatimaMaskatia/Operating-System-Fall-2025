@@ -1,7 +1,7 @@
+
 // Shell.
 
 #include "kernel/types.h"
-#include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/fcntl.h"
 
@@ -13,11 +13,6 @@
 #define BACK  5
 
 #define MAXARGS 10
-#define MAX_HISTORY 10
-
-// Global history variables
-char history[MAX_HISTORY][100];
-int history_count = 0;
 
 struct cmd {
   int type;
@@ -59,30 +54,6 @@ int fork1(void);  // Fork but panics on failure.
 void panic(char*);
 struct cmd *parsecmd(char*);
 void runcmd(struct cmd*) __attribute__((noreturn));
-
-// History functions
-void add_to_history(char *cmd) {
-    if(strlen(cmd) > 1) { // Don't save empty commands
-        if(history_count < MAX_HISTORY) {
-            strcpy(history[history_count++], cmd);
-        } else {
-            // Shift history
-            for(int i = 1; i < MAX_HISTORY; i++) {
-                strcpy(history[i-1], history[i]);
-            }
-            strcpy(history[MAX_HISTORY-1], cmd);
-        }
-    }
-}
-
-void show_history() {
-    for(int i = 0; i < history_count; i++) {
-        printf("%d: %s", i, history[i]);
-        if(history[i][strlen(history[i])-1] != '\n') {
-            printf("\n");
-        }
-    }
-}
 
 // Execute cmd.  Never returns.
 void
@@ -162,11 +133,9 @@ runcmd(struct cmd *cmd)
 }
 
 int
-getcmd(char *buf, int nbuf, int interactive)
+getcmd(char *buf, int nbuf)
 {
-  if(interactive) {
-    write(2, "$ ", 2);
-  }
+  write(2, "$ ", 2);
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
   if(buf[0] == 0) // EOF
@@ -175,24 +144,10 @@ getcmd(char *buf, int nbuf, int interactive)
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
   static char buf[100];
   int fd;
-  int interactive = 1;
-
-  // If arguments passed, we're reading from file
-  if(argc > 1) {
-    interactive = 0;
-    if((fd = open(argv[1], O_RDONLY)) < 0) {
-      fprintf(2, "cannot open %s\n", argv[1]);
-      exit(1);
-    }
-    // Redirect stdin to the file
-    close(0);
-    dup(fd);
-    close(fd);
-  }
 
   // Ensure that three file descriptors are open.
   while((fd = open("console", O_RDWR)) >= 0){
@@ -203,53 +158,21 @@ main(int argc, char *argv[])
   }
 
   // Read and run input commands.
-  while(getcmd(buf, sizeof(buf), interactive) >= 0){
-    // Remove trailing newline for processing
-    int len = strlen(buf);
-    if(len > 0 && buf[len-1] == '\n') {
-      buf[len-1] = 0;
-    }
-    
-    // Handle empty command
-    if(strlen(buf) == 0) {
-      if(interactive) {
-        continue; // Show prompt again
-      } else {
-        break; // End of file
-      }
-    }
-    
-    // Handle history command
-    if(strcmp(buf, "history") == 0) {
-      show_history();
-      if(interactive) {
-        continue;
-      } else {
-        break;
-      }
-    }
-    
-    // Save to history before processing (only in interactive mode)
-    if(interactive) {
-      add_to_history(buf);
-    }
-    
+  while(getcmd(buf, sizeof(buf)) >= 0){
     char *cmd = buf;
     while (*cmd == ' ' || *cmd == '\t')
       cmd++;
-      
+    if (*cmd == '\n') // is a blank command
+      continue;
     if(cmd[0] == 'c' && cmd[1] == 'd' && cmd[2] == ' '){
+      // Chdir must be called by the parent, not the child.
+      cmd[strlen(cmd)-1] = 0;  // chop \n
       if(chdir(cmd+3) < 0)
         fprintf(2, "cannot cd %s\n", cmd+3);
     } else {
       if(fork1() == 0)
         runcmd(parsecmd(cmd));
       wait(0);
-    }
-    
-    // If non-interactive mode, break after first command
-    if(!interactive) {
-      break;
     }
   }
   exit(0);
@@ -272,6 +195,10 @@ fork1(void)
     panic("fork");
   return pid;
 }
+
+//PAGEBREAK!
+// Constructors
+
 struct cmd*
 execcmd(void)
 {
@@ -336,7 +263,7 @@ backcmd(struct cmd *subcmd)
   cmd->cmd = subcmd;
   return (struct cmd*)cmd;
 }
-
+//PAGEBREAK!
 // Parsing
 
 char whitespace[] = " \t\r\n\v";

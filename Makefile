@@ -1,4 +1,3 @@
-
 # To compile and run with a lab solution, set the lab name in conf/lab.mk
 # (e.g., LAB=util).  Run make grade to test solution with the lab's
 # grade script (e.g., grade-lab-util).
@@ -88,8 +87,7 @@ LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
-#CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb -gdwarf-2
-CFLAGS = -Wall -Werror -O0 -g -fno-omit-frame-pointer -ggdb -gdwarf-2
+CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb -gdwarf-2
 
 ifdef LAB
 LABUPPER = $(shell echo $(LAB) | tr a-z A-Z)
@@ -196,13 +194,10 @@ UPROGS=\
 	$U/_logstress\
 	$U/_forphan\
 	$U/_dorphan\
-	$U/_uptime\
-	$U/_find\
-	$U/_sleep\
-	$U/_sixfive\
-	$U/_memdump\
-	$U/_time\
 	$U/_sandbox\
+
+
+
 ifeq ($(LAB),util)
 UPROGS += \
 	$U/_sleep\
@@ -211,7 +206,6 @@ UPROGS += \
 endif
 ### ENDIF
 
->>>>>>> 586bab2 (util lab)
 
 ifeq ($(LAB),syscall)
 UPROGS += \
@@ -291,13 +285,9 @@ ifeq ($(LAB),util)
 	UEXTRA += user/sixfive.txt
 	UPROGS += $U/_memdump
 endif
-<<<<<<< HEAD
-
-=======
 ifeq ($(LAB),syscall)
 	UEXTRA += user/exec.sh
 endif
->>>>>>> 586bab2 (util lab)
 
 fs.img: mkfs/mkfs README $(UEXTRA) $(UPROGS)
 	mkfs/mkfs fs.img README $(UEXTRA) $(UPROGS)

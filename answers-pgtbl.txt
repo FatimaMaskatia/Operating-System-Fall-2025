@@ -1,0 +1,98 @@
+va = virtual address
+pa = physical address
+perm = permission bits
+
+Each line shows a mapping from a virtual address to a physical address via a page table entry. 
+The pte is the raw 64-bit Page Table Entry value. The perm field encodes permission bits according to the RISC-V PTE format.
+The first few pages correspond to the user program text/data, the unmapped region is the heap gap, and the top two pages are for the trapframe and trampoline.
+
+1. va 0x0 pte 0x21FC885B pa 0x87F22000 perm 0x5B
+This page maps the start of the user program (text segment).
+Permission bits are 0x5B which in binary is 0101 1011, indicate that it is valid, readable, executable, and accessible from user space.
+It contains the beginning of the code of the user process.
+
+2. va 0x1000 pte 0x21FC7C5B pa 0x87F1F000 perm 0x5B
+This is the next page of user code. Each page is 4KB. va 0x1000 is being mapped to pa 0x87F1F000.
+The same permission bits (0x5B) indicate it is part of the readable and executable code section.
+
+3. va 0x2000 pte 0x21FC7817 pa 0x87F1E000 perm 0x17
+This page belongs to the data segment (initialized data). va 0x2000 is being mapped to 0x87F1F000
+Permission bits 0x17 meaning valid, user-accessible, readable, and writable (no execute bit).
+It stores global and static variables.
+
+4. va 0x3000 pte 0x21FC7407 pa 0x87F1D000 perm 0x7
+Permission bits 0x7 indicates (no user bit), possibly used by kernel initialization before user mapping is fully set.
+This region can hold stack data or internal bookkeeping.
+
+5. va 0x4000 pte 0x21FC70D7 pa 0x87F1C000 perm 0xD7
+Another user stack or data-related page, but here the permission bits are 0xD7 which include Uer accessible,Read,
+write, Accessable, Dirty and Valid.
+A (accessed) and D (dirty) bits are set, meaning this page has been read/written by the process.
+It’s likely part of the active user stack.
+
+6. va 0x5000 pte 0x0 pa 0x0 perm 0x0
+This entry have no valid mapping (pte = 0x0), meaning the virtual addresses are unmapped. This correspond to
+unused memory space between the program’s heap and stack areas.
+
+7. va 0x6000 pte 0x0 pa 0x0 perm 0x0
+This entry have no valid mapping (pte = 0x0), meaning the virtual addresses are unmapped.
+This corresponds to unused memory space between the program’s heap and stack areas.
+
+8. va 0x7000 pte 0x0 pa 0x0 perm 0x0
+This entry have no valid mapping (pte = 0x0), meaning the virtual addresses are unmapped.
+This correspond to unused memory space between the program’s heap and stack areas.
+
+9. va 0x8000 pte 0x0 pa 0x0 perm 0x0
+This entry have no valid mapping (pte = 0x0), meaning the virtual addresses are unmapped.
+This correspond to unused memory space between the program’s heap and stack areas.
+
+10. va 0x9000 pte 0x0 pa 0x0 perm 0x0
+This entry have no valid mapping (pte = 0x0), meaning the virtual addresses are unmapped.
+This correspond to unused memory space between the program’s heap and stack areas.
+
+11. va 0xFFFF6000 pte 0x0 pa 0x0 perm 0x0
+This is also unmapped virtual address in the upper virtual address space, reserved for future use or guard pages.
+No valid mappings exist here (pte = 0).
+
+12. va 0xFFFF7000 pte 0x0 pa 0x0 perm 0x0
+This is also unmapped virtual address in the upper virtual address space, reserved for future use or guard pages.
+No valid mappings exist here (pte = 0).
+
+13. va 0xFFFF8000 pte 0x0 pa 0x0 perm 0x0
+This is also unmapped virtual address in the upper virtual address space, reserved for future use or guard pages.
+No valid mappings exist here (pte = 0).
+
+14. va 0xFFFF9000 pte 0x0 pa 0x0 perm 0x0
+This is also unmapped virtual address in the upper virtual address space, reserved for future use or guard pages.
+No valid mappings exist here (pte = 0).
+
+15. va 0xFFFFA000 pte 0x0 pa 0x0 perm 0x0
+This is also unmapped virtual address in the upper virtual address space, reserved for future use or guard pages.
+No valid mappings exist here (pte = 0).
+
+16. va 0xFFFFB000 pte 0x0 pa 0x0 perm 0x0
+This is also unmapped virtual address in the upper virtual address space, reserved for future use or guard pages.
+No valid mappings exist here (pte = 0).
+
+17. va 0xFFFFC000 pte 0x0 pa 0x0 perm 0x0
+This is also unmapped virtual address in the upper virtual address space, reserved for future use or guard pages. 
+No valid mappings exist here (pte = 0).
+
+18. va 0xFFFFD000 pte 0x0 pa 0x0 perm 0x0
+This is also unmapped virtual address in the upper virtual address space, reserved for future use or guard pages.
+No valid mappings exist here (pte = 0).
+
+19. va 0xFFFFE000 pte 0x21FD50C7 pa 0x87F54000 perm 0xC7
+This page contains the user trapframe, a per-process structure the kernel uses to save registers during a trap or syscall.
+The va 0xFFFFE000 is mapped to pas 0x8754000
+Permission bits 0xC7 indicates User accessible, Read, Write, Valid, Accessed, Dirty meaning valid, user-accessible, 
+read/write, and recently accessed.It bridges user–kernel transitions.
+
+20.va 0xFFFFF000 pte 0x2000184B pa 0x80006000 perm 0x4B
+This final page maps the trampoline page, containing code that switches between user mode and kernel mode. 
+The va 0xFFFFF000 is mapped to pas 0x80006000                                                                            
+Permission bits 0x4B indicates the permissions valid, user-executable, read-only.
+This code executes during syscalls and traps to enter/exit the kernel safely.
+
+
+print_pgtbl: OK

@@ -1,3 +1,4 @@
+Q1:
 va = virtual address
 pa = physical address
 perm = permission bits
@@ -95,4 +96,9 @@ Permission bits 0x4B indicates the permissions valid, user-executable, read-only
 This code executes during syscalls and traps to enter/exit the kernel safely.
 
 
-print_pgtbl: OK
+Q2:
+The optimization maps a read-only page at the address USYSCALL into each process’s address space. 
+This page contains a struct usyscall initialized with the process’s PID. The user-space function ugetpid()
+reads the PID directly from this page instead of invoking a system call, eliminating the kernel boundary crossing.
+Other system calls like getppid() or time() could also be sped up using this shared page, as they return small, 
+read-only pieces of kernel state.

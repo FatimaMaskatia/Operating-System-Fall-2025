@@ -142,9 +142,33 @@ walkaddr(pagetable_t pagetable, uint64 va)
 
 
 #if defined(LAB_PGTBL) || defined(SOL_MMAP) || defined(SOL_COW)
-void
-vmprint(pagetable_t pagetable) {
-  // your code here
+  // kernel/vm.c
+//added for lab 3 q3
+// kernel/vm.c
+void 
+vmprint(pagetable_t pagetable)
+{
+  printf("page table %p\n", pagetable);
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if(pte & PTE_V){
+      printf("..%d: pte %p pa %p\n", i, (void*)pte, (void*)PTE2PA(pte));
+      pagetable_t second = (pagetable_t)PTE2PA(pte);
+      for(int j = 0; j < 512; j++){
+        pte = second[j];
+        if(pte & PTE_V){
+          printf(".. ..%d: pte %p pa %p\n", j, (void*)pte, (void*)PTE2PA(pte));
+          pagetable_t third = (pagetable_t)PTE2PA(pte);
+          for(int k = 0; k < 512; k++){
+            pte = third[k];
+            if(pte & PTE_V){
+              printf(".. .. ..%d: pte %p pa %p\n", k, (void*)pte, (void*)PTE2PA(pte));
+            }
+          }
+        }
+      }
+    }
+  }
 }
 #endif
 

@@ -1,3 +1,4 @@
+Answers to Lab 3 Page tables
 Q1:
 va = virtual address
 pa = physical address
@@ -95,6 +96,7 @@ The va 0xFFFFF000 is mapped to pas 0x80006000
 Permission bits 0x4B indicates the permissions valid, user-executable, read-only.
 This code executes during syscalls and traps to enter/exit the kernel safely.
 
+--------------------------------------------------------------------------------------------------------------------------------------------
 
 Q2:
 The optimization maps a read-only page at the address USYSCALL into each process’s address space. 
@@ -102,3 +104,47 @@ This page contains a struct usyscall initialized with the process’s PID. The u
 reads the PID directly from this page instead of invoking a system call, eliminating the kernel boundary crossing.
 Other system calls like getppid() or time() could also be sped up using this shared page, as they return small, 
 read-only pieces of kernel state.
+
+---------------------------------------------------------------------------------------------------------------------------------------
+
+Q3:
+
+The vmprint() function in vm.c displays the full three-level page table structure used by RISC-V. Each line shows a
+valid PTE (page table entry) at a specific level as there are three levels, including its virtual address, the PTE bits
+and the corresponding physical address. In my vmprint() output, the top-level page table is at address 0x0000000087f51000.
+The entries under it correspond to valid mappings in the process’s address space.
+The indentation (.. ..) indicates how deep in the page table hierarchy the entry is.
+
+These are the low level addresses
+.. .. ..0: pte 0x0000000021fd381b pa 0x0000000087f4e000
+.. .. ..1: pte 0x0000000021fd2c17 pa 0x0000000087f4b000
+.. .. ..2: pte 0x0000000021fd2807 pa 0x0000000087f4a000
+.. .. ..3: pte 0x0000000021fd2417 pa 0x0000000087f49000
+
+These correspond to user space pages for the process: Code (text segment), Data and BSS segments, 
+Stack (depending on process size)
+Each leaf page (the last level that directly maps to physical memory) represents a real memory page used by the process. 
+
+The permission bits (e.g., 0x1B, 0x17, 0x07) show combinations of:
+PTE_V (valid), PTE_R (read), PTE_W (write), PTE_X (execute), PTE_U (user-accessible).
+For example:
+0x1B → valid, user, readable, writable (data)
+0x17 → valid, user, readable, executable (code)
+0x07 → valid, readable, writable, executable (shared or stack-like pages)
+These match the print_pgtbl() output earlier, which showed mappings for user virtual addresses starting from 0x0 through 0x4000.
+
+High virtual addresses (near 0x3FFFFFD000 and up):
+.. .. ..509: pte 0x0000000021fd5413 pa 0x0000000087f55000
+.. .. ..510: pte 0x0000000021fd5807 pa 0x0000000087f56000
+.. .. ..511: pte 0x000000002000180b pa 0x0000000080006000
+
+These are special kernel-mapped pages used by all processes. trapframe (stores registers on traps/syscalls). Trampoline (code for entering/exiting the kernel)
+These are mapped in every process’s page table so user processes can transition safely into kernel mode.
+The permission bits indicate:
+Valid (PTE_V)
+Readable (PTE_R)
+Executable (PTE_X) — trampoline page
+Not writable (since code pages aren’t)
+
+These correspond to the last two mappings seen in the print_pgtbl() output..Compared to the earlier print_pgtbl() output, which showed a simplified linear mapping of user virtual addresses, vmprint() reveals the full multi-level page table layout used by the hardware to perform address translation.
+This helps visualize how the OS organizes user and kernel pages in memory.

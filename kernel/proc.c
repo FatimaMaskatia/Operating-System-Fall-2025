@@ -237,7 +237,7 @@ proc_pagetable(struct proc *p)
     uvmfree(pagetable, 0);
     return 0;
   }
-  // lab3, map one read-only page at USYSCALL, store the PID
+  // for lab3 q2, map one read-only page at USYSCALL, store the PID
   p->usyscall->pid = p->pid;
   if(mappages(pagetable, USYSCALL, PGSIZE,(uint64)p->usyscall, PTE_R | PTE_U) < 0){
     uvmunmap(pagetable, USYSCALL, 1, 0);

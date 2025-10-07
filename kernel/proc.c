@@ -107,6 +107,7 @@ allocpid()
 // If found, initialize state required to run in the kernel,
 // and return with p->lock held.
 // If there are no free procs, or a memory allocation fails, return 0.
+
 static struct proc*
 allocproc(void)
 {
@@ -132,43 +133,22 @@ found:
     release(&p->lock);
     return 0;
   }
-  if((p->usyscall = (struct usyscall *)kalloc()) == 0){
-    freeproc(p);
-    release(&p->lock);
-    return 0;
-  }
 
   // An empty user page table.
-  p->pagetable = proc_pagetable(p);
+ p->pagetable = proc_pagetable(p);
   if(p->pagetable == 0){
     freeproc(p);
     release(&p->lock);
     return 0;
   }
-//added for q3 lab 3
-  // Allocate a page for usyscall.
-  //p->usyscall = (struct usyscall *)kalloc();
-  //if(p->usyscall == 0){
-    //freeproc(p);
-    //release(&p->lock);
-    //return 0;
-  //}
-  //memset(p->usyscall, 0, PGSIZE);
-//  p->usyscall->pid = p->pid;
+// Allocate a usyscall page
 
-  // Map USYSCALL (read-only, user-accessible).
-  // NOTE: kalloc() returns a kernel virtual address; mappages needs the physical address.
-  
-//if (mappages(p->pagetable, USYSCALL, PGSIZE,
-      //        (uint64)p->usyscall - KERNBASE,
-    //          PTE_U | PTE_R | PTE_V) != 0) {
-  //kfree(p->usyscall);
- // p->usyscall = 0;
-  //freeproc(p);
-  //release(&p->lock);
- // return 0;
-//}
-//till here
+    if((p->usyscall = (struct usyscall *)kalloc()) == 0){
+        freeproc(p);
+        release(&p->lock);
+        return 0;
+    }
+    p->usyscall->pid = p->pid;
 
 
   // Set up new context to start executing at forkret,
@@ -179,6 +159,7 @@ found:
 
   return p;
 }
+
 
 // free a proc structure and the data hanging from it,
 // including user pages.
@@ -192,6 +173,9 @@ freeproc(struct proc *p)
 
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+if(p->usyscall)
+    kfree((void*)p->usyscall);
+  p->usyscall = 0;
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
@@ -201,9 +185,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
-  if(p->usyscall)
-    kfree((void*)p->usyscall);
-  p->usyscall = 0;
+
 
 }
 
@@ -228,7 +210,14 @@ proc_pagetable(struct proc *p)
     uvmfree(pagetable, 0);
     return 0;
   }
-
+//added for lab 3 q2
+if(mappages(pagetable, USYSCALL, PGSIZE,
+              (uint64)(p->usyscall), PTE_R | PTE_U) < 0){
+        uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+        uvmunmap(pagetable, TRAPFRAME, 1, 0);
+        uvmfree(pagetable, 0);
+        return 0;
+    }
   // map the trapframe page just below the trampoline page, for
   // trampoline.S.
   if(mappages(pagetable, TRAPFRAME, PGSIZE,
@@ -237,12 +226,7 @@ proc_pagetable(struct proc *p)
     uvmfree(pagetable, 0);
     return 0;
   }
-  // for lab3 q2, map one read-only page at USYSCALL, store the PID
-  p->usyscall->pid = p->pid;
-  if(mappages(pagetable, USYSCALL, PGSIZE,(uint64)p->usyscall, PTE_R | PTE_U) < 0){
-    uvmunmap(pagetable, USYSCALL, 1, 0);
-    uvmfree(pagetable, 0);
-  }
+
   return pagetable;
 }
 

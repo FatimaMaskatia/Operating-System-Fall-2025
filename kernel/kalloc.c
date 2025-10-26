@@ -14,6 +14,7 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
+extern uint64 totalmem;//added for q1 assignment 2
 struct run {
   struct run *next;
 };
@@ -27,7 +28,8 @@ void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
-  freerange(end, (void*)PHYSTOP);
+  freerange(end, (void*)(KERNBASE + totalmem)); //added for q1 assignment 2
+  //freerange(end, (void*)PHYSTOP);
 }
 
 void

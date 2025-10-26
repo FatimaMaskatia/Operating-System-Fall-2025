@@ -57,3 +57,9 @@
 //   TRAPFRAME (p->trapframe, used by the trampoline)
 //   TRAMPOLINE (the same page as in the kernel)
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
+
+//assignment 2 q1
+#ifndef __ASSEMBLER__
+extern uint64 totalmem;
+#endif
+

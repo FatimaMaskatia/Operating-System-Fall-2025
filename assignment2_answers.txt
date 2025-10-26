@@ -1,0 +1,8 @@
+Question 1:
+In Q1, I modified the xv6-riscv kernel to parse the RISC-V device tree (FDT) in order to detect the actual amount of physical memory
+available on the machine. The bootloader passes the address of the device tree in register a1, so I updated start.c to read this 
+address, parse the FDT header and locate the “memory” node, then extract its base address and size from the "reg" property. 
+I implemented a small local function (early_strcmp) to compare strings during parsing since the standard strcmp is
+not yet linked at this stage. The detected memory size is stored in a new global variable `totalmem`, declared in memlayout.h, 
+which can later be used in kalloc.c to dynamically set the kernel’s memory range instead of using the fixed PHYSTOP constant. 
+The kernel was rebuilt and tested successfully under QEMU, printing the detected physical memory at boot.

@@ -617,7 +617,7 @@ setkilled(struct proc *p)
 
 int
 killed(struct proc *p)
-{
+{ //Operating system organization
   int k;
   
   acquire(&p->lock);

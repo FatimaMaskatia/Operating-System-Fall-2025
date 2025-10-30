@@ -59,7 +59,7 @@
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
 
 //assignment 2 q1
-#ifndef __ASSEMBLER__
-extern uint64 totalmem;
-#endif
+//#ifndef __ASSEMBLER__
+//extern uint64 totalmem;
+//#endif
 

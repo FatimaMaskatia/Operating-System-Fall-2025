@@ -1,8 +1,31 @@
-Question 1:
-In Q1, I modified the xv6-riscv kernel to parse the RISC-V device tree (FDT) in order to detect the actual amount of physical memory
-available on the machine. The bootloader passes the address of the device tree in register a1, so I updated start.c to read this 
-address, parse the FDT header and locate the “memory” node, then extract its base address and size from the "reg" property. 
-I implemented a small local function (early_strcmp) to compare strings during parsing since the standard strcmp is
-not yet linked at this stage. The detected memory size is stored in a new global variable `totalmem`, declared in memlayout.h, 
-which can later be used in kalloc.c to dynamically set the kernel’s memory range instead of using the fixed PHYSTOP constant. 
-The kernel was rebuilt and tested successfully under QEMU, printing the detected physical memory at boot.
+Chapter 4
+
+Question 2:  Is there a way to eliminate the special TRAPFRAME page mapping in every user address space? For example, could uservec 
+be modified to simply push the 32 user registers onto the kernel stack, or store them in the proc structure?
+
+No, not safely. The TRAPFRAME page mapping cannot be eliminated in xv6's current RISC-V architecture due to fundamental constraints in the trap
+handling mechanism. When a trap occurs from user mode, the processor switches to supervisor mode but continues using the user page
+table, meaning kernel memory addresses, including the kernel stack and proc structure, are inaccessible and cannot be translated.
+The TRAPFRAME page is essential because it provides the only writable memory region that is mapped at the same virtual address in 
+every user address space while simultaneously pointing to physical memory accessible by the kernel. This allows the uservec trap 
+handler to immediately save all 32 user registers to a known location before switching to the kernel page table. Without this 
+special mapping, there would be no safe place to preserve register state during the critical transition period when the CPU is in 
+kernel mode but still using user page tables.
+
+The trapframe works because it is mapped at the same virtual address in all user spaces, but each points to a different physical 
+page for each process. Without it, the kernel wouldn’t know where to safely store user registers at trap entry, thus it is not
+safe to eliminate the trap frame.
+
+Question 3: Could xv6 be modified to eliminate the special TRAMPOLINE page mapping?
+
+No, xv6 cannot eliminate the TRAMPOLINE page mapping without changing hardware or breaking isolation.The critical issue occurs 
+during the page table switch: when the CPU executes the satp register write to transition from user to kernel page tables, the very
+next instruction must be fetchable from the same virtual address in both the old and new page tables. The TRAMPOLINE page solves 
+this by being identity-mapped at the same fixed virtual address in all address spaces, allowing the trap handling code to execute 
+seamlessly across the page table transition. Any attempt to eliminate this mapping—whether through per-process trampolines, direct 
+kernel entry, or other schemes—would fail because the CPU would be unable to fetch instructions immediately after switching page 
+tables. This requirement is not merely an implementation detail but a fundamental constraint of RISC-V's virtual memory system that
+ensures continuous execution flow during privilege transitions.
+
+The trampoline provides this continuity across the page table switch. Removing it would require mapping kernel code into user space
+or adding hardware support to switch page tables automatically, both unsafe or impossible in xv6.

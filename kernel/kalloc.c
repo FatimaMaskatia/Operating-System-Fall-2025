@@ -28,8 +28,8 @@ void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
-  freerange(end, (void*)(KERNBASE + totalmem)); //added for q1 assignment 2
-  //freerange(end, (void*)PHYSTOP);
+//  freerange(end, (void*)(KERNBASE + totalmem)); //added for q1 assignment 2
+  freerange(end, (void*)PHYSTOP);
 }
 
 void

@@ -1,4 +1,4 @@
-/*#include "types.h"
+#include "types.h"
 #include "param.h"
 #include "memlayout.h"
 #include "riscv.h"
@@ -65,7 +65,6 @@ timerinit()
   w_stimecmp(r_time() + 1000000);
 }
 
-*/
 
 
 
@@ -78,6 +77,7 @@ timerinit()
 
 
 
+/*
 //assignment 2 q1
 #include "types.h"
 #include "param.h"
@@ -232,3 +232,4 @@ timerinit()
   w_stimecmp(r_time() + 1000000);
 }
 
+*/

@@ -1,0 +1,29 @@
+Fatima Faisal - 28989
+Lab 4 - Traps
+
+Q1: Which registers contain arguments to functions? For example, which register holds 13 in main's call to printf?
+answer: The registers a0 to a7 store the function's parameters/argumnets.
+For example, in `printf`, a2 stores parameter 13. a0 stores the address of the first element of the format string of printf.
+
+Q2: Where is the call to function f in the assembly code for main? Where is the call to g?
+(Hint: the compiler may inline functions.)
+answer: There is no jal or jalr calling f or g, because the compiler inlined both functions into main.
+
+Q3: At what address is the function printf located?
+answer:  The printf function is located at the memory address 0x60a.
+
+
+Q4: What value is in the register ra just after the jalr to printf in main?
+answer: The ra (return address) register will contain the address of the instruction immediately following the jalr instruction, which is 0x38 in this case.
+
+Q5:What is the output? If the RISC-V were instead big-endian what would you set i to in order to yield the same output? 
+Would you need to change 57616 to a different value?
+answer: The output is He110 World. This is because RISC-V is little-endian, the value 0x00646c72 is stored in memory
+as bytes 72 6c 64 00, which correspond to the characters "rld" and 57616 is 110.
+If the machine were big-endian, the bytes would be stored like: i = 0x726c6400.
+The value 57616 does not need to change.
+
+Q6:In the following code, what is going to be printed after 'y='? Why does this happen?
+answer: Depending on the value of register a2, the instruction needs to read the parameters a1 and a2.
+printf("x=%d y=%d", 3) passes only one argument, but the format string expects two.
+So x=3, and y= prints garbage and thus is not specific, because printf reads the next argument from register a2, which contains an undefined leftover value.

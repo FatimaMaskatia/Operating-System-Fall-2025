@@ -44,7 +44,7 @@ usertrap(void)
 
   // send interrupts and exceptions to kerneltrap(),
   // since we're now in the kernel.
-  w_stvec((uint64)kernelvec);
+  w_stvec((uint64)kernelvec);  //DOC: kernelvec
 
   struct proc *p = myproc();
   
@@ -81,8 +81,17 @@ usertrap(void)
     kexit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2){
+    p->currticks++;
+    if (p->using_handler == 0 && (p->interval !=0 || p->handler !=0) && p->currticks == p->interval) {
+      p->using_handler = 1;
+      p->currticks = 0;
+      p->trapframe_saved = (struct trapframe*)kalloc();
+      memmove(p->trapframe_saved, p->trapframe, sizeof(struct trapframe));
+      p->trapframe->epc = p->handler;
+    }
     yield();
+  }
 
   prepare_return();
 
@@ -216,4 +225,3 @@ devintr()
     return 0;
   }
 }
-

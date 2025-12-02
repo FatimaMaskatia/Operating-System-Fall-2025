@@ -87,7 +87,9 @@ printf("\nprocess %d ticks: %d\n", p->pid, p-> time_in_queue);
 ticks_since_boost++; //and also time since boost
 printf("ticks since boost: %d\n\n", ticks_since_boost);
 
-//kiya process ne apna time slice poora kiya
+//did the process completed its time slice?
+// if the pointer that points to queue is 0 then assign it queu1_time
+// if it is 1 then queue2 time and if 2 then queue 3 time 
 int slice = (p->queue == 0 ? QUEUE1_TIME :
                  p->queue == 1 ? QUEUE2_TIME :
                  p->queue == 2 ? QUEUE3_TIME :

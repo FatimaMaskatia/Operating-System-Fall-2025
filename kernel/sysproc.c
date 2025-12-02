@@ -13,7 +13,7 @@ sys_exit(void)
   int n;
   argint(0, &n);
   kexit(n);
-  return 0;  // not reached
+  return 0;
 }
 
 uint64
@@ -42,6 +42,7 @@ sys_sbrk(void)
   uint64 addr;
   int t;
   int n;
+
 
   argint(0, &n);
   argint(1, &t);

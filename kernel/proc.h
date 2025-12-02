@@ -77,8 +77,28 @@ struct trapframe {
   /* 264 */ uint64 t4;
   /* 272 */ uint64 t5;
   /* 280 */ uint64 t6;
+
 };
 
+
+#define QUEUE_COUNT 4
+#define QUEUE1_TIME 4
+#define QUEUE2_TIME 8
+#define QUEUE3_TIME 16
+#define BOOST_TIME 40   //TO PREVENT STARVATION OF A PROCESS THAT IS DEMOTED
+
+struct proc_queue{     //struct for th queue
+struct proc* procs[NPROC];
+int head; //headpointer
+int tail; //tail pointer
+struct spinlock lock;
+};
+
+void enqueue(struct proc_queue *q, struct proc *p);  //enqueue to add
+struct proc* dequeue(struct proc_queue *q);    //dequeue to remove
+int is_empty (struct proc_queue *q);   //check if queue empty
+void print_queue(void);    //print the queue
+extern int ticks_since_boost;
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -104,4 +124,8 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+int time_in_queue;      //time spent in the queue by proc
+int queue; //queue proc is in
+int in_queue; //flag to show proc is in queue so it doesnt go anywhere else
 };

@@ -6,7 +6,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "vm.h"
-
+extern struct proc proc[];
 uint64
 sys_exit(void)
 {
@@ -104,4 +104,16 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+uint64
+sys_getprocinfo(void)
+{
+    struct proc *p;
+    printf("\nPID\tSTATE\tNAME\n");
+    for(p = proc; p < &proc[NPROC]; p++){
+        if(p->state != UNUSED){
+            printf("%d\t%d\t%s\n", p->pid, p->state, p->name);
+        }
+    }
+    return 0;
 }

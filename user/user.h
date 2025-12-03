@@ -49,3 +49,4 @@ void* malloc(uint);
 void free(void*);
 
 int getprocinfo(void);
+int boostproc(void);

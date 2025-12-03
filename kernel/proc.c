@@ -9,6 +9,8 @@
 int ticks_since_boost = 0;
 struct proc_queue queues[QUEUE_COUNT];
 
+
+
 //add to queue
 void enqueue(struct proc_queue *q, struct proc *p){
 	if ((q-> tail +1) % NPROC == q-> head){ //circular queue sod and checking that its doesnt point again to head
@@ -54,7 +56,7 @@ void print_queue(void) {
 }
 
 struct cpu cpus[NCPU];
-
+int ncpu;
 struct proc proc[NPROC];
 
 struct proc *initproc;
@@ -72,6 +74,47 @@ extern char trampoline[]; // trampoline.S
 // memory model when using p->parent.
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
+
+void boost_all(void) {
+
+  // 1) boost queued processes
+  for (int q = 1; q < QUEUE_COUNT; q++) {
+    acquire(&queues[q].lock);
+    struct proc *bp;
+    while ((bp = dequeue(&queues[q])) != 0) {
+      acquire(&bp->lock);
+      bp->queue = 0;
+      bp->time_in_queue = 0;
+      release(&bp->lock);
+
+      acquire(&queues[0].lock);
+      enqueue(&queues[0], bp);
+      release(&queues[0].lock);
+    }
+    release(&queues[q].lock);
+  }
+
+  // 2) boost running processes on all harts
+  extern struct cpu cpus[]; extern int ncpu;
+  for (int i = 0; i < ncpu; i++) {
+    struct cpu *cc = &cpus[i];
+    struct proc *rp = cc->proc;
+    if (rp == 0) continue;
+    acquire(&rp->lock);
+    if (rp->queue > 0) {
+      rp->queue = 0;
+      rp->time_in_queue = 0;
+      if (!rp->in_queue) {
+        acquire(&queues[0].lock);
+        enqueue(&queues[0], rp);
+        release(&queues[0].lock);
+      }
+    }
+    release(&rp->lock);
+  }
+
+  ticks_since_boost = 0;
+}
 
 // Allocate a page for each process's kernel stack.
 // Map it high in memory, followed by an invalid
@@ -527,12 +570,9 @@ scheduler(void)
                     // q==1 → 8 ticks
                     // q==2 → 16 ticks
                     // q==3 → infinite
-                    int timeslice;
-                    if(q == 0)      timeslice = QUEUE1_TIME;  // 4 ticks
-                    else if(q == 1) timeslice = QUEUE2_TIME;  // 8 ticks
-                    else if(q == 2) timeslice = QUEUE3_TIME;  // 16 ticks
-                    else            timeslice = 1000000000;    // "infinite"
-
+int timeslice = (q == 0 ? QUEUE1_TIME :
+                                     (q == 1 ? QUEUE2_TIME :
+                                               QUEUE3_TIME));
                     if(p->time_in_queue >= timeslice && p->queue < QUEUE_COUNT - 1){
                         p->queue++;              // demote
                         p->time_in_queue = 0;
@@ -544,7 +584,7 @@ scheduler(void)
                     acquire(&queues[p->queue].lock);
                     enqueue(&queues[p->queue], p);
                     release(&queues[p->queue].lock);
-			if(demoted){
+                        if(demoted){
                         print_queue();
                     }
                 }
@@ -599,7 +639,6 @@ scheduler(void)
     }
   }
 }
-
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
 // intena because intena is a property of this

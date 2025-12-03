@@ -87,16 +87,13 @@ printf("\nprocess %d ticks: %d\n", p->pid, p-> time_in_queue);
 ticks_since_boost++; //and also time since boost
 printf("ticks since boost: %d\n\n", ticks_since_boost);
 
-//did the process completed its time slice?
-// if the pointer that points to queue is 0 then assign it queu1_time
-// if it is 1 then queue2 time and if 2 then queue 3 time 
+//kiya process ne apna time slice poora kiya
 int slice = (p->queue == 0 ? QUEUE1_TIME :
-                 p->queue == 1 ? QUEUE2_TIME :
-                 p->queue == 2 ? QUEUE3_TIME :
-                                  1000000); // Q3 has huge slice of time
+                 p->queue == 1 ? QUEUE2_TIME : QUEUE3_TIME); 
 
-    if(p->time_in_queue >= slice)
+    if((p->time_in_queue >= slice) || (ticks_since_boost >= BOOST_TIME)){
     yield();
+}
 }
   prepare_return();
 
@@ -107,9 +104,9 @@ int slice = (p->queue == 0 ? QUEUE1_TIME :
   return satp;
 }
 
-
+//
 // set up trapframe and control registers for a return to user space
-
+//
 void
 prepare_return(void)
 {
@@ -118,7 +115,6 @@ prepare_return(void)
   // we're about to switch the destination of traps from
   // kerneltrap() to usertrap(). because a trap from kernel
   // code to usertrap would be a disaster, turn off interrupts.
-
   intr_off();
 
   // send syscalls, interrupts, and exceptions to uservec in trampoline.S
@@ -148,7 +144,6 @@ prepare_return(void)
 // interrupts and exceptions from kernel code go here via kernelvec,
 // on whatever the current kernel stack is.
 void 
-
 kerneltrap()
 {
   int which_dev = 0;
@@ -224,9 +219,7 @@ devintr()
       plic_complete(irq);
 
     return 1;
-
-  }
- else if(scause == 0x8000000000000005L){
+  } else if(scause == 0x8000000000000005L){
     // timer interrupt.
     clockintr();
     return 2;

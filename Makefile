@@ -195,6 +195,13 @@ UPROGS=\
 	$U/_logstress\
 	$U/_forphan\
 	$U/_dorphan\
+	$U/_burn\
+	$U/_io\
+	$U/_pinfo\
+	$U/_quick\
+	$U/_sleep\
+
+
 
 
 

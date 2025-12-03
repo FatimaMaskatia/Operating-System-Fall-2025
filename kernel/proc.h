@@ -85,7 +85,11 @@ struct trapframe {
 #define QUEUE1_TIME 4
 #define QUEUE2_TIME 8
 #define QUEUE3_TIME 16
+<<<<<<< HEAD
 #define BOOST_TIME 40   //TO PREVENT STARVATION OF A PROCESS THAT IS DEMOTED
+=======
+#define BOOST_TIME 40   //TO PREVENT STARVATION
+>>>>>>> MLFQ_Scheduler
 
 struct proc_queue{     //struct for th queue
 struct proc* procs[NPROC];
@@ -125,7 +129,13 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
+<<<<<<< HEAD
 int time_in_queue;      //time spent in the queue by proc
 int queue; //queue proc is in
 int in_queue; //flag to show proc is in queue so it doesnt go anywhere else
+=======
+int time_in_queue;
+int queue;
+int in_queue;
+>>>>>>> MLFQ_Scheduler
 };
